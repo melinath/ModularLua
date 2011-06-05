@@ -9,7 +9,7 @@ function dialog.parse(...)
 	--[[
 		Given a simple table input, converts it into a dialog.
 		For example, the input:
-			{type="text_box", id="shell"}
+			{widget="text_box", id="shell"}
 		would give the output (with T = helper.set_wml_tag_metatable {}):
 			{
 				T.tooltip{id="tooltip_large"},
@@ -74,10 +74,10 @@ end
 function dialog.make_columns(cfg)
 	local columns = {}
 	for i=1,#cfg do
-		-- Easier to just set cfg[i], since the extra ``type`` keyword will
+		-- Easier to just set cfg[i], since the extra ``widget`` keyword will
 		-- be ignored anyway.
 		local cell = {
-			cfg[i].type,
+			cfg[i].widget,
 			cfg[i]
 		}
 		table.insert(columns, T.column{
@@ -93,7 +93,7 @@ dialog.dialog = {
 	init = function(self, ...)
 		local o = {}
 		setmetatable(o, self)
-		o.dialog = d.parse(unpack(arg))
+		o.dialog = dialog.parse(unpack(arg))
 		return o
 	end,
 	display = function(self)
@@ -118,5 +118,9 @@ dialog.dialog = {
 	on_button = function(self, rval) end,
 }
 dialog.dialog.__index = dialog.dialog
+
+dialog.create = function(...)
+	return dialog.dialog:init(unpack(arg))
+end
 
 return dialog

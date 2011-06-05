@@ -74,7 +74,10 @@ function game_events.on_event(name)
 	local funcs = events.events[name]
 	if funcs ~= nil then
 		for i,f in ipairs(funcs) do
-			f()
+			local success, rval = pcall(f)
+			if not success and modular.settings.debug then
+				modular.message(string.format("Event failed: %s", rval))
+			end
 		end
 	end
 	if old_on_event ~= nil then old_on_event(name) end
@@ -100,7 +103,7 @@ events.register(function()
 		if cls.persist then
 			local arr = helper.get_variable_array("name")
 			for i=1,#arr do
-				quest:init(arr[i])
+				cls:init(arr[i])
 			end
 		end
 	end

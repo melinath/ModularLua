@@ -30,12 +30,16 @@ function modular.require_tags(...)
 			tags[mod] = rval
 		else
 			if modular.settings.debug then
-				wesnoth.message("ModularLua", string.format("Tag loading failed for %s. Error was: %s", mod, rval))
+				modular.message(string.format("Tag loading failed for %s. Error was: %s", mod, rval))
 			end
 			tags[mod] = nil
 		end
 	end
 	return tags
+end
+
+function modular.message(str)
+	wesnoth.message("ModularLua", str)
 end
 
 return modular
