@@ -51,36 +51,35 @@ function m.color(r, g, b, ...) return m.concat(m.color_prefix(r,g,b), m.concat(a
 
 interface.dialog = {}
 local d = interface.dialog
-d.__index = d
 function d.parse(...)
-		--[[
-			Given a simple table input, converts it into a dialog.
-			For example, the input:
-				{type="text_box", id="shell"}
-			would give the output (with T = helper.set_wml_tag_metatable {}):
-				{
-					T.tooltip{id="tooltip_large"},
-					T.helptip{id="tooltip_large"},
-					T.grid{
-						T.row{
-							T.column{
-								horizontal_grow = true,
-								T.text_box{
-									id="shell"
-								}
+	--[[
+		Given a simple table input, converts it into a dialog.
+		For example, the input:
+			{type="text_box", id="shell"}
+		would give the output (with T = helper.set_wml_tag_metatable {}):
+			{
+				T.tooltip{id="tooltip_large"},
+				T.helptip{id="tooltip_large"},
+				T.grid{
+					T.row{
+						T.column{
+							horizontal_grow = true,
+							T.text_box{
+								id="shell"
 							}
 						}
 					}
 				}
-			This output can be used for wesnoth.show_dialog.
-		]]
-		dialog = {
-			T.tooltip{id="tooltip_large"},
-			T.helptip{id="tooltip_large"},
-			T.grid(d.make_rows(arg))
-		}
-		return dialog
-	end
+			}
+		This output can be used for wesnoth.show_dialog.
+	]]
+	local rows = d.make_rows(arg)
+	dialog = {
+		T.tooltip{id="tooltip_large"},
+		T.helptip{id="tooltip_large"},
+		T.grid(rows)
+	}
+	return dialog
 end
 function d.make_rows(cfg, idx, rowlen)
 	-- Given a cfg, parses it into rows and returns them. If ``num_cols`` is
@@ -90,7 +89,7 @@ function d.make_rows(cfg, idx, rowlen)
 	local rows = {}
 	local idx = idx or 1
 	local old_rowlen = rowlen
-	while idx < #cfg do
+	while idx <= #cfg do
 		local rowlen = #cfg[idx]
 		local columns
 		if rowlen == 0 then
@@ -111,19 +110,23 @@ function d.make_rows(cfg, idx, rowlen)
 			table.insert(rows, T.row{T.column{T.grid(subrows)}})
 		else
 			-- We need to return the rows we've made without increasing idx
-			return rows, idx
+			break
 		end
 	end
-	return rows
+	return rows, idx
 end
 function d.make_columns(cfg)
 	local columns = {}
 	for i=1,#cfg do
-		local t = cfg[i].type
-		cfg[i].type = nil
+		-- Easier to just set cfg[i], since the extra ``type`` keyword will
+		-- be ignored anyway.
+		local cell = {
+			cfg[i].type,
+			cfg[i]
+		}
 		table.insert(columns, T.column{
 			horizontal_grow = true,
-			T[t](cfg[i])
+			cell
 		})
 	end
 	return columns
@@ -158,5 +161,6 @@ d.dialog = {
 	on_esc = function(self) end,
 	on_button = function(self, rval) end,
 }
+d.dialog.__index = d.dialog
 
 return interface
