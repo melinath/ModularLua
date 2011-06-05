@@ -240,6 +240,10 @@ events.register(function()
 		if maps.settings.mark_visited then map:mark_visited() end
 		if maps.settings.mark_known then map:mark_known() end
 		if maps.settings.remember_shroud then map:load_shroud() end
+	else
+		if maps.settings.require_map then
+			error("~wml:Expected [map] tag is missing.")
+		end
 	end
 end, "prestart")
 events.register(function()

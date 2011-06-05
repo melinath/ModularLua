@@ -1,9 +1,11 @@
-local events = wesnoth.require "events"
+local events = modular.require "events"
 
 local capture = {}
 
 capture.settings = {
-	disallow_sides = {1=true}
+	sides = {
+		[1]=true
+	},
 }
 
 capture.villages = {}
@@ -18,7 +20,7 @@ events.register(function()
 	
 	if u == nil then
 		capture.add_village(c.x1, c.y1)
-	elseif capture.settings.disallow_sides[u.side] then
+	elseif capture.settings.sides[u.side] then
 		if villages[c.x1] ~= nil then
 			wesnoth.set_village_owner(c.x1, c.y1, villages[c.x1][c.y1])
 		end

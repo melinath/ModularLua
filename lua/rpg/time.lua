@@ -1,7 +1,7 @@
 --! Defines generic time utilities for persistent cross-scenario time.
 --! Time is represented in hours.
 
-local events = wesnoth.require "events"
+local events = modular.require "events"
 
 local time = {}
 
