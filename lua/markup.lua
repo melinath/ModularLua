@@ -3,12 +3,6 @@
 local markup = {
 	bullet = "&#8226; ",
 	
-	color_prefix = function(r, g, b)
-		-- cribbed from lua/wml/objectives.lua
-		return string.format('<span foreground="#%02x%02x%02x">', r, g, b)
-	end,
-	color_suffix = function() return "</span>" end,
-	
 	concat = function(...)
 		-- Concatanate strings and userdata.
 		local s = ""
@@ -17,13 +11,39 @@ local markup = {
 		end
 		return s
 	end,
+	
+	tag = function(name, ...)
+		-- Syntax: tag(name, [attrs], contents...)
+		local attr_str = ""
+		local contents = arg
+		
+		if type(contents[1]) == 'table' then
+			--Then they've provided attrs.
+			local attrs = {}
+			for k,v in pairs(contents[1]) do
+				table.insert(attrs, string.format('%s="%s"', k, v))
+			end
+			attr_str = " " .. table.concat(attrs, " ")
+			table.remove(contents, 1)
+		end
+		local open = string.format("<%s%s>", name, attr_str)
+		local close = string.format("</%s>", name)
+		return m.concat(open, unpack(contents), close)
+	end
 }
 
 local m = markup
 
-function m.tag(name, str) return m.concat("<", name, ">", str, "</", name, ">") end
-function m.small(str) return m.tag("small", str) end
-function m.big(str) return m.tag("big", str) end
-function m.color(r, g, b, ...) return m.concat(m.color_prefix(r,g,b), m.concat(arg), m.color_suffix()) end
+function m.small(...) return m.tag("small", unpack(arg)) end
+function m.big(...) return m.tag("big", unpack(arg)) end
+
+local function minmax(val, min, max)
+	return math.max(math.min(val, max), min)
+end
+function m.color(r, g, b, ...)
+	local r, g, b = minmax(r, 0, 255), minmax(g, 0, 255), minmax(b, 0, 255)
+	local attrs = {foreground=string.format("#%02x%02x%02x", r, g, b)}
+	return m.tag("span", attrs, unpack(arg))
+end
 
 return markup
