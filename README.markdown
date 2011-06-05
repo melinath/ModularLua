@@ -1,0 +1,1 @@
+This Wesnoth add-on aims to make writing Lua scripts for other Wesnoth add-ons easier by providing a variety of useful scripts which can be used independently of one another.
