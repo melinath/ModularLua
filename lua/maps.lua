@@ -170,11 +170,11 @@ maps.map = events.tag:new("map", {
 	--map_data = nil,
 	init = function(self, cfg)
 		if maps.current ~= nil then error("~wml:Only one [map] tag is permitted.") end
+		if cfg.id == nil then error("~wml:[map] tag must specify an id.") end
 		
 		local o = self:get_parent().init(self, cfg)
 		
 		o.id = cfg.id
-		if o.id == nil then error("~wml:[map] tag must specify an id.") end
 		o.turns_per_day = cfg.turns_per_day or maps.defaults.turns_per_day
 		
 		if cfg.schedule == nil then
@@ -182,6 +182,7 @@ maps.map = events.tag:new("map", {
 		else
 			o.schedule = maps.schedules.from_str(cfg.schedule)
 		end
+		
 		maps.current = o
 		return o
 	end,
@@ -229,6 +230,13 @@ maps.map = events.tag:new("map", {
 				wesnoth.fire("store_shroud", {side=side, variable=var})
 			end
 		end
+	end,
+	
+	set = function(self, var, value)
+		maps.vars.set(self.id, var, value)
+	end,
+	get = function(self, var, default)
+		return maps.vars.get(self.id, var, default)
 	end,
 })
 
