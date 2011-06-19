@@ -216,7 +216,7 @@ maps.map = events.tag:new("map", {
 	
 	load_shroud = function(self)
 		if maps.settings.remember_shroud then
-			for i, side in ipairs(map.settings) do
+			for i, side in ipairs(maps.settings.shroud_sides) do
 				local var = string.format("shroud%d", side)
 				local data = maps.vars.get(self.id, var)
 				if data ~= nil then wesnoth.fire("set_shroud", {side=side, shroud_data=data}) end
