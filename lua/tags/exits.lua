@@ -2,6 +2,7 @@
 --! start locations.
 
 local events = modular.require "events"
+local helper = wesnoth.require "lua/helper.lua"
 
 local exits = {}
 
