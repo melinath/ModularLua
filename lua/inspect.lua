@@ -37,14 +37,27 @@ function inspect.type(data)
 end
 
 
+function inspect.userdata(data)
+	-- Converts userdata to a table if possible; otherwise, returns the data
+	-- unchanged.
+	local data_type = inspect.type(data)
+	if data_type == "unit" or data_type == "side" then
+		return data.__cfg
+	elseif data_type == "wml object" then
+		return data.__literal
+	end
+	return data
+end
+
+
 function inspect.tostring(data)
 	-- Returns a string representation of the ``data``, up to ``depth`` levels
 	-- of the table, if applicable.
 	local result = ""
-	if type(data) == "table" or type(data) == "userdata" then
+	local data = inspect.userdata(data)
+	if type(data) == "table" then
 		local max_depth = inspect.settings.max_depth
 		local base_indent = inspect.settings.base_indent
-		local data = helper.literal(data)
 		local known = {
 			[tostring(data)] = true
 		}
@@ -55,8 +68,8 @@ function inspect.tostring(data)
 			local result = ""
 			for k, v in pairs(data) do
 				result = result .. indent .. k .. " = "
-				if getmetatable(v) == "translatable string" then v = tostring(v) end
-				if type(v) == "userdata" or type(v) == "table" then
+				if type(v) == "userdata" then v = inspect.userdata(v) end
+				if type(v) == "table" then
 					if depth >= max_depth then
 						result = result .. "{<max recursion reached>},\n"
 					else
