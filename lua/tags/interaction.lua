@@ -1,7 +1,8 @@
 --! Defines functions and tags for handling generic "interactions" from e.g.
 --! stepping on a particular location.
-local events = wesnoth.require "~add-ons/ModularLua/lua/events.lua"
+local events = modular.require "events"
 local items = wesnoth.require "lua/wml/items.lua"
+local helper = wesnoth.require "lua/helper.lua"
 
 --! Interaction class
 local interaction = events.tag:new("interaction", {
@@ -34,30 +35,31 @@ events.register(function()
 	local c = wesnoth.current.event_context
 	local u = wesnoth.get_unit(c.x1, c.y1)
 	if u ~= nil then
-		local ints = interactions.interaction.instances
+		local ints = interaction.instances
 		for i=1,#ints do
 			local int = ints[i]
 			if wesnoth.match_unit(u, int.filter) then
-			wesnoth.fire("store_unit", {{"filter", {id=u.id}}, variable="unit", kill=false})
-			wesnoth.set_variable("x1", c.x1)
-			wesnoth.set_variable("x2", c.x2)
-			wesnoth.set_variable("y1", c.y1)
-			wesnoth.set_variable("y2", c.y2)
-			for i=1,#int.command do
-				local v = int.command[i]
-				wesnoth.fire(v[1], v[2])
+				wesnoth.fire("store_unit", {{"filter", {id=u.id}}, variable="unit", kill=false})
+				wesnoth.set_variable("x1", c.x1)
+				wesnoth.set_variable("x2", c.x2)
+				wesnoth.set_variable("y1", c.y1)
+				wesnoth.set_variable("y2", c.y2)
+				for i=1,#int.command do
+					local v = int.command[i]
+					wesnoth.fire(v[1], v[2])
+				end
+				wesnoth.set_variable("unit")
+				wesnoth.set_variable("x1")
+				wesnoth.set_variable("x2")
+				wesnoth.set_variable("y1")
+				wesnoth.set_variable("y2")
 			end
-			wesnoth.set_variable("unit")
-			wesnoth.set_variable("x1")
-			wesnoth.set_variable("x2")
-			wesnoth.set_variable("y1")
-			wesnoth.set_variable("y2")
 		end
 	end
 end, "moveto")
 
 events.register(function()
-	local ints = interactions.interaction.instances
+	local ints = interaction.instances
 	for i=1,#ints do
 		local int = ints[i]
 		if int.image and int.x and int.y then

@@ -10,14 +10,28 @@ function modular.debug()
 	modular.settings.debug = true
 end
 
-function modular.require(name, addon)
-	--! Loads the file named ``name`` from the add-on ``addon`` (defaults
-	--! to ModularLua. This assumes that the add-on stores its lua files in
-	--! "~add-ons/<addon>/lua/<name>.lua".
+function modular.build_path(name, addon)
+	--! Returns the path to a lua file within a given add-on, assuming a
+	--! structure like "~add-ons/<addon>/lua/<name>.lua". ``addon`` defaults
+	--! to "ModularLua".
 	local addon = tostring(addon or "ModularLua")
 	local name = tostring(name)
 	if string.find(name, ".", 1, true) then error(string.format("Invalid module: %s (in %s)", name, addon)) end
-	return wesnoth.require(string.format("~add-ons/%s/lua/%s.lua", addon, name))
+	return string.format("~add-ons/%s/lua/%s.lua", addon, name)
+end
+
+function modular.require(name, addon)
+	--! Shortcut for wesnoth.require "~add-ons/<addon>/lua/<name>.lua".
+	--! ``addon`` defaults to "ModularLua".
+	local path = modular.build_path(name, addon)
+	return wesnoth.require(path)
+end
+
+function modular.dofile(name, addon)
+	--! Shortcut for wesnoth.dofile "~add-ons/<addon>/lua/<name>.lua".
+	--! ``addon`` defaults to "ModularLua".
+	local path = modular.build_path(name, addon)
+	return wesnoth.require(path)
 end
 
 function modular.require_tags(...)

@@ -46,4 +46,15 @@ function m.color(r, g, b, ...)
 	return m.tag("span", attrs, unpack(arg))
 end
 
+m.escape_values = {
+	["<"] = "&lt;",
+	[">"] = "&gt;",
+}
+
+function m.escape(str)
+	-- Makes a string pango-safe by converting special entities to their
+	-- entity equivalents.
+	return (string.gsub(str, "([<>])", m.escape_values))
+end
+
 return markup
