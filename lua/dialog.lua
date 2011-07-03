@@ -5,7 +5,7 @@ local T = helper.set_wml_tag_metatable {}
 
 local dialog = {}
 
-function dialog.parse(...)
+function dialog.parse(cfg)
 	--[[
 		Given a simple table input, converts it into a dialog.
 		For example, the input:
@@ -27,12 +27,17 @@ function dialog.parse(...)
 			}
 		This output can be used for wesnoth.show_dialog.
 	]]
-	local rows = dialog.make_rows(arg)
+	local rows = dialog.make_rows(cfg)
 	local d = {
 		T.tooltip{id="tooltip_large"},
 		T.helptip{id="tooltip_large"},
 		T.grid(rows)
 	}
+	for k, v in pairs(cfg) do
+		if type(k) ~= "number" then
+			d[k] = v
+		end
+	end
 	return d
 end
 
@@ -90,10 +95,10 @@ end
 
 --! A base class for dialogs
 dialog.dialog = {
-	init = function(self, ...)
-		local o = {}
+	new = function(self, grid, cfg)
+		local o = cfg or {}
 		setmetatable(o, self)
-		o.dialog = dialog.parse(unpack(arg))
+		o.dialog = dialog.parse(grid)
 		return o
 	end,
 	display = function(self)
@@ -105,6 +110,7 @@ dialog.dialog = {
 		else
 			self:on_button(rval)
 		end
+		return rval
 	end,
 	
 	-- hooks for handling dialog pre- and postshow.
