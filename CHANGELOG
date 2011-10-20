@@ -1,0 +1,4 @@
+Development version
+
+* events.register now takes a single event name as its first argument and a
+  function as its second argument.

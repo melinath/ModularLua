@@ -94,7 +94,7 @@ exits.exit_canceler = events.tag:new("cancel_exit", {
 	end,
 })
 
-events.register(function()
+events.register("prestart", function()
 	-- Set starting position.
 	local x = wesnoth.get_variable(exits.settings.start_x_var)
 	local y = wesnoth.get_variable(exits.settings.start_y_var)
@@ -113,9 +113,9 @@ events.register(function()
 	
 	wesnoth.set_variable(exits.settings.start_x_var)
 	wesnoth.set_variable(exits.settings.start_y_var)
-end, "prestart")
+end)
 
-events.register(function()
+events.register("moveto", function()
 	local es = exits.exit.instances
 	for i=1,#es do
 		if es[i]:is_active() then
@@ -131,7 +131,7 @@ events.register(function()
 			if activate then es[i]:activate() end
 		end
 	end
-end, "moveto")
+end)
 
 
 return exits

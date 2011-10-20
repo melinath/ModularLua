@@ -242,7 +242,7 @@ maps.map = events.tag:new("map", {
 
 
 --! Event registrations
-events.register(function()
+events.register("prestart", function()
 	local map = maps.current
 	if map then
 		if maps.settings.mark_visited then map:mark_visited() end
@@ -253,13 +253,15 @@ events.register(function()
 			error("~wml:Expected [map] tag is missing.")
 		end
 	end
-end, "prestart")
-events.register(function()
+end)
+local function save_shroud()
 	local map = maps.current
 	if map then
 		if maps.settings.remember_shroud then map:save_shroud() end
 	end
-end, "victory", "defeat")
+end
+events.register("victory", save_shroud)
+events.register("defeat", save_shroud)
 
 
 return maps

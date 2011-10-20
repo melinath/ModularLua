@@ -14,7 +14,7 @@ function capture.add_village(x, y)
 	villages[x][y] = wesnoth.get_village_owner(x, y)
 end
 
-events.register(function()
+events.register("capture", function()
 	local c = wesnoth.current.event_context
 	local u = wesnoth.get_unit(c.x1, c.y1)
 	
@@ -25,12 +25,12 @@ events.register(function()
 			wesnoth.set_village_owner(c.x1, c.y1, villages[c.x1][c.y1])
 		end
 	end
-end, "capture")
+end)
 
-events.register(function()
+events.register("preload", function()
 	for i, loc in ipairs(wesnoth.get_locations{terrain="*^V*"}) do
 		capture.add_village(unpack(loc))
 	end
-end, "preload")
+end)
 
 return capture

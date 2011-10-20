@@ -31,7 +31,7 @@ local interaction = events.tag:new("interaction", {
 })
 
 
-events.register(function()
+events.register("moveto", function()
 	local c = wesnoth.current.event_context
 	local u = wesnoth.get_unit(c.x1, c.y1)
 	if u ~= nil then
@@ -56,9 +56,9 @@ events.register(function()
 			end
 		end
 	end
-end, "moveto")
+end)
 
-events.register(function()
+events.register("prestart", function()
 	local ints = interaction.instances
 	for i=1,#ints do
 		local int = ints[i]
@@ -71,6 +71,6 @@ events.register(function()
 			end
 		end
 	end
-end, "prestart")
+end)
 
 return interaction

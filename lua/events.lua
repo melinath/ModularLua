@@ -6,69 +6,27 @@ local helper = wesnoth.require "lua/helper.lua"
 
 local events = {}
 
---! Scenario-level tag handling
-events.tags = {}
-events.tag = {
-	new = function(self, name, cfg)
-		local cls = cfg or {}
-		cls.__index = cls
-		setmetatable(cls, self)
-		cls.instances = {}
-		events.tags[name] = cls
-		wesnoth.register_wml_action(name, function(cfg) cls:init(cfg) end)
-		return cls
-	end,
-	init = function(cls, cfg)
-		local obj = {}
-		setmetatable(obj, cls)
-		table.insert(cls.instances, obj)
-		obj.cfg = cfg
-		return obj
-	end,
-	get_parent = function(self)
-		return getmetatable(self)
-	end,
-	dump = function(self)
-		return self.cfg
-	end
-}
-events.tag.__index = events.tag
 
+--! Event registration !--
 
-local old_on_load = game_events.on_load
-function game_events.on_load(cfg)
-	for i=#cfg,1,-1 do
-		local tag = cfg[i]
-		for name, cls in pairs(events.tags) do
-			if name == tag[1] then
-				cls:init(tag[2])
-				break
-			end
-		end
-	end
-end
-
-local old_on_save = game_events.on_save
-function game_events.on_save()
-	cfg = old_on_save()
-	for name, cls in pairs(events.tags) do
-		for i=1,#cls.instances do
-			table.insert(cfg, {name, cls.instances[i]:dump()})
-		end
-	end
-	return cfg
-end
-
-
---! Event handling
+--! Container for all registered events. Maps event names to tables of functions
+--! to be run for that event.
 events.events = {}
-function events.register(func, ...)
-	for i, name in ipairs(arg) do
-		if events.events[name] == nil then events.events[name] = {} end
-		table.insert(events.events[name], func)
-	end
+
+
+function events.register(name, func)
+	--! Registers a function to be run when the event with the given ``name`` is
+	--! fired by the wesnoth game engine.
+	if events.events[name] == nil then events.events[name] = {} end
+	table.insert(events.events[name], func)
 end
 
+
+--! On each event, runs all functions that have been registered for that event
+--! in the order in which they were registered. All event functions are run in
+--! protected mode; a failing function will not stop subsequent functions from
+--! running. If ``modular.settings.debug`` is ``true``, then an error message
+--! will be printed for each failing function.
 local old_on_event = game_events.on_event
 function game_events.on_event(name)
 	local funcs = events.events[name]
@@ -84,29 +42,127 @@ function game_events.on_event(name)
 end
 
 
-events.register(function()
-	-- At the end of the scenario, save tags that should persist.
+--! Scenario-level tag handling !--
+
+--! ModularLua supports scenario-level tags out of the box, something which is
+--! generally a pain to implement otherwise. All scenario tags created with
+--! ModularLua can also be used as action tags; in this case, a new instance of
+--! the scenario tag will be added to the scenario-level information. By
+--! default, scenario-level tags are not expected to "do" anything beyond
+--! storing information about the current scenario (see, for example,
+--! ModularLua/lua/maps.lua).
+
+--! Container for all known scenario-level tags.
+events.tags = {}
+
+events.tag = {
+	--! Base class for scenario-level tags. New tags can be registered by
+	--! calling ``events.tag:new`` and passing in the name of the tag and a
+	--! configuration table defining its behavior.
+	
+	--! Whether or not the tag's configuration should persist between scenarios.
+	persist = false,
+	
+	new = function(self, name, cfg)
+		--! Given a name and a configuration table, register the class as a
+		--! ModularLua event tag and register a wml action to create new
+		--! instances of the tag class.
+		local cls = cfg or {}
+		cls.__index = cls
+		setmetatable(cls, self)
+		cls.instances = {}
+		events.tags[name] = cls
+		wesnoth.register_wml_action(name, function(cfg) cls:init(cfg) end)
+		return cls
+	end,
+	init = function(cls, cfg)
+		--! By default, the init method simply stores the WML configuration
+		--! that was used to initialize the tag so that the information can be
+		--! dumped back into the scenario context on save. Subclasses should
+		--! override the init method to provide more complex functionality if
+		--! it is needed. Any subclasses which do so should be sure to call
+		--! cls:get_parent().init(cls, cfg) to make sure that the new instance
+		--! is properly handled by the events framework.
+		local obj = {}
+		setmetatable(obj, cls)
+		table.insert(cls.instances, obj)
+		obj.cfg = cfg
+		return obj
+	end,
+	get_parent = function(self)
+		--! Returns the parent class of ``self`` if ``self`` is a class.
+		return getmetatable(self)
+	end,
+	dump = function(self)
+		--1 Returns a WML-formatted representation of the tag. By default, this
+		--! is simply the cfg that was stored during ``init``, so that
+		--! using the output of this tag to create a new instance would result
+		--! in an instance identical to ``self``.
+		return self.cfg
+	end
+}
+events.tag.__index = events.tag
+
+
+--! Initialize scenario-level declarations of the tag on load.
+local old_on_load = game_events.on_load
+function game_events.on_load(cfg)
+	for i=#cfg,1,-1 do
+		local tag = cfg[i]
+		for name, cls in pairs(events.tags) do
+			if name == tag[1] then
+				cls:init(tag[2])
+				break
+			end
+		end
+	end
+end
+
+
+--! Save all instances of the tag to the scenario level on save.
+local old_on_save = game_events.on_save
+function game_events.on_save()
+	cfg = old_on_save()
+	for name, cls in pairs(events.tags) do
+		for i=1,#cls.instances do
+			table.insert(cfg, {name, cls.instances[i]:dump()})
+		end
+	end
+	return cfg
+end
+
+
+local function persist_variable_name(name)
+	return string.format("modular.events.%s" % name)
+end
+
+
+local function save_persisting_tags()
+	--! Saves tags that are marked to persist as wesnoth variables.
 	for name, cls in pairs(events.tags) do
 		if cls.persist then
 			local arr = {}
 			for i=1,#cls.instances do
 				table.insert(arr, cls.instances[i]:dump())
 			end
-			helper.set_variable_array(name, arr)
+			helper.set_variable_array(persist_variable_name(name), arr)
 		end
 	end
-end, "victory", "defeat")
+end
+events.register("victory", save_persisting_tags)
+events.register("defeat", save_persisting_tags)
 
-events.register(function()
-	-- When the scenario starts, load tags that have persisted.
+local function load_persisted_tags()
+	--! Loads persisted tags from the previous scenario.
 	for name, cls in pairs(events.tags) do
 		if cls.persist then
-			local arr = helper.get_variable_array("name")
+			local arr = helper.get_variable_array(persist_variable_name(name))
 			for i=1,#arr do
 				cls:init(arr[i])
 			end
 		end
 	end
-end, "prestart")
+end
+events.register("prestart", load_persisted_tags)
 
 return events
