@@ -5,6 +5,8 @@ local T = helper.set_wml_tag_metatable {}
 
 local interface = {
 	message = function(image, message, speaker)
+		--! Fires a wesnoth message. Arguments for this function are effectively
+		--! [image], message, [speaker]
 		if message == nil and speaker == nil then
 			message = image
 			image = "wesnoth-icon.png"
