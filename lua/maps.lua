@@ -173,7 +173,7 @@ maps.map = events.tag:new("map", {
 		if cfg.id == nil then error("~wml:[map] tag must specify an id.") end
 		
 		local o = self:get_parent().init(self, cfg)
-		
+
 		o.id = cfg.id
 		o.turns_per_day = cfg.turns_per_day or maps.defaults.turns_per_day
 		
@@ -225,7 +225,7 @@ maps.map = events.tag:new("map", {
 	end,
 	save_shroud = function(self)
 		if maps.settings.remember_shroud then
-			for i, side in ipairs(map.settings.shroud_sides) do
+			for i, side in ipairs(maps.settings.shroud_sides) do
 				local var = maps.vars.get_name(self.id, string.format("shroud%d", side))
 				wesnoth.fire("store_shroud", {side=side, variable=var})
 			end

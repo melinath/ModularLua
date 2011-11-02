@@ -34,7 +34,7 @@ function game_events.on_event(name)
 		for i,f in ipairs(funcs) do
 			local success, rval = pcall(f)
 			if not success and modular.settings.debug then
-				modular.message(string.format("Event failed: %s", rval))
+				modular.message(string.format("%s failed for %s event: %s", tostring(f), name, rval))
 			end
 		end
 	end
@@ -133,7 +133,7 @@ end
 
 
 local function persist_variable_name(name)
-	return string.format("modular.events.%s" % name)
+	return string.format("modular.events.%s", name)
 end
 
 
@@ -156,9 +156,15 @@ local function load_persisted_tags()
 	--! Loads persisted tags from the previous scenario.
 	for name, cls in pairs(events.tags) do
 		if cls.persist then
-			local arr = helper.get_variable_array(persist_variable_name(name))
-			for i=1,#arr do
-				cls:init(arr[i])
+			-- Hack to work around the built-in library's lack of a default for
+			-- array length in helper.get_variable_array. Remove in 1.10.
+			local var_name = persist_variable_name(name)
+			local array_length = wesnoth.get_variable(var_name .. ".length")
+			if array_length ~= nil then
+				local arr = helper.get_variable_array(var_name)
+				for i=1,#arr do
+					cls:init(arr[i])
+				end
 			end
 		end
 	end
