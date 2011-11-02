@@ -71,6 +71,7 @@ events.tag = {
 		cls.__index = cls
 		setmetatable(cls, self)
 		cls.instances = {}
+		events.tags[name] = cls
 		table.insert(events.tags, {name, cls})
 		wesnoth.register_wml_action(name, function(cfg) cls:init(cfg) end)
 		return cls
