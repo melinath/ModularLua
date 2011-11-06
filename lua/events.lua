@@ -95,7 +95,7 @@ events.tag = {
 		return getmetatable(self)
 	end,
 	dump = function(self)
-		--1 Returns a WML-formatted representation of the tag. By default, this
+		--! Returns a WML-formatted representation of the tag. By default, this
 		--! is simply the cfg that was stored during ``init``, so that
 		--! using the output of this tag to create a new instance would result
 		--! in an instance identical to ``self``.

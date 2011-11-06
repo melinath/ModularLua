@@ -9,7 +9,9 @@ local exits = {}
 exits.settings = {
 	start_x_var = "start_x",
 	start_y_var = "start_y",
-	sides = {1}
+	--! A comma-separated list of sides, like you would pass to a standard unit
+	--! filter.
+	sides = "1"
 }
 
 --! Exit class
@@ -108,7 +110,7 @@ events.register("prestart", function()
 			wesnoth.fire("unstore_unit", {variable=var, find_vacant=true})
 		end
 		wesnoth.set_variable(var)
-		wesnoth.scroll_to_tile(start_x, start_y)
+		wesnoth.scroll_to_tile(x, y)
 	end
 	
 	wesnoth.set_variable(exits.settings.start_x_var)

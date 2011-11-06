@@ -163,6 +163,37 @@ maps.vars = {
 }
 
 
+--! Shroud handling
+maps.shroud = {
+	data_to_filter = function(shroud_data)
+		--! Converts shroud data to a standard location filter.
+		if shroud_data == "" then return {} end
+		local width, height, border = wesnoth.get_map_size()
+
+		local x = 1 - border
+		local locs_x, locs_y = {}, {}
+		for row in string.gmatch(shroud_data, "|(%d*)") do
+			local y = 1 - border
+			for hex in string.gmatch(row, "%d") do
+				if hex == "1" then
+					table.insert(locs_x, x)
+					table.insert(locs_y, y)
+				end
+				--! Shroud data is rotated 90 degrees from the map, so moving
+				--! across the row is actually an increase along the y axis.
+				y = y + 1
+			end
+			x = x + 1
+		end
+
+		return {
+			x = table.concat(locs_x, ","),
+			y = table.concat(locs_y, ",")
+		}
+	end
+}
+
+
 --! A map class. For now there will only be one instance of it, located
 --! at maps.current.
 maps.map = events.tag:new("map", {
@@ -217,17 +248,23 @@ maps.map = events.tag:new("map", {
 	load_shroud = function(self)
 		if maps.settings.remember_shroud then
 			for i, side in ipairs(maps.settings.shroud_sides) do
-				local var = string.format("shroud%d", side)
-				local data = maps.vars.get(self.id, var)
-				if data ~= nil then wesnoth.fire("set_shroud", {side=side, shroud_data=data}) end
+				local shroud_data = self:get(string.format("shroud%d", side))
+				if shroud_data ~= nil then
+					local cfg = maps.shroud.data_to_filter(shroud_data)
+					cfg['side'] = side
+					wesnoth.fire("remove_shroud", cfg)
+				end
 			end
 		end
 	end,
 	save_shroud = function(self)
 		if maps.settings.remember_shroud then
-			for i, side in ipairs(maps.settings.shroud_sides) do
-				local var = maps.vars.get_name(self.id, string.format("shroud%d", side))
-				wesnoth.fire("store_shroud", {side=side, variable=var})
+			for i, side_number in ipairs(maps.settings.shroud_sides) do
+				local side = wesnoth.get_side(side_number)
+				local shroud_data = side.__cfg.shroud_data
+				if shroud_data ~= "" then
+					self:set(string.format("shroud%d", side_number), shroud_data)
+				end
 			end
 		end
 	end,
