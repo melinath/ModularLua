@@ -31,12 +31,12 @@ function markup.tag(name, ...)
 	end
 	local open = string.format("<%s%s>", name, attr_str)
 	local close = string.format("</%s>", name)
-	return markup.concat(open, table.unpack(select(start, ...)), close)
+	return markup.concat(open, select(start, ...), close)
 end
 
 
-function markup.small(...) return markup.tag("small", table.unpack(...)) end
-function markup.big(...) return markup.tag("big", table.unpack(...)) end
+function markup.small(...) return markup.tag("small", ...) end
+function markup.big(...) return markup.tag("big", ...) end
 
 local function minmax(val, min, max)
 	return math.max(math.min(val, max), min)
@@ -44,7 +44,7 @@ end
 function markup.color(r, g, b, ...)
 	local r, g, b = minmax(r, 0, 255), minmax(g, 0, 255), minmax(b, 0, 255)
 	local attrs = {foreground=string.format("#%02x%02x%02x", r, g, b)}
-	return markup.tag("span", attrs, table.unpack(...))
+	return markup.tag("span", attrs, ...)
 end
 
 markup.escape_values = {
