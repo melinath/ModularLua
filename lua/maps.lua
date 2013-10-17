@@ -260,7 +260,7 @@ maps.map = events.tag:new("map_setup", {
 	save_shroud = function(self)
 		if maps.settings.remember_shroud then
 			for i, side_number in ipairs(maps.settings.shroud_sides) do
-				local side = wesnoth.get_side(side_number)
+				local side = wesnoth.sides[side_number]
 				local shroud_data = side.__cfg.shroud_data
 				if shroud_data ~= "" then
 					self:set(string.format("shroud%d", side_number), shroud_data)
