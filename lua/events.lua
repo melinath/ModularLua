@@ -108,15 +108,24 @@ events.tag.__index = events.tag
 --! Initialize scenario-level declarations of the tag on load.
 local old_on_load = game_events.on_load
 function game_events.on_load(cfg)
+	local scenario_tags = {}
+
+	-- First, collect the scenario-level tags. Loops through in reverse.
+	-- Need to do it this way so removal doesn't screw up the order.
 	for i=#cfg,1,-1 do
 		local tag = cfg[i]
 		if events.tags[tag[1]] then
-			events.tags[tag[1]]:init(tag[2])
+			table.insert(scenario_tags, cfg[i])
 			table.remove(cfg, i)
 		end
 	end
-	for i, tag_def in ipairs(events.tags) do
-		local name, cls = table.unpack(tag_def)
+
+	-- Now loop through them backwards and init them. This means the tags are
+	-- instantiated in the order they're declared. This is important so that map
+	-- setup data (for example) is available ASAP.
+	for i=#scenario_tags, 1, -1 do
+		local tag = scenario_tags[i]
+		events.tags[tag[1]]:init(tag[2])
 	end
 	old_on_load(cfg)
 end
