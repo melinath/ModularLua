@@ -40,16 +40,16 @@ exits.exit = events.tag:new("exit", {
 		wesnoth.set_variable(exits.settings.start_x_var, self.start_x)
 		wesnoth.set_variable(exits.settings.start_y_var, self.start_y)
 		wesnoth.fire_event("exit", c.x1, c.y1, c.x2, c.y2)
-		local e = {
+		wesnoth.fire("endlevel", {
 			name = "victory",
 			save = true,
 			carryover_report = false,
 			carryover_percentage = 100,
 			linger_mode = false,
 			bonus = false,
-			next_scenario = self.scenario
-		}
-		wesnoth.fire("endlevel", e)
+			next_scenario = self.scenario,
+			replay_save = false
+		})
 	end
 })
 
@@ -100,16 +100,22 @@ events.register("prestart", function()
 	-- Set starting position.
 	local x = wesnoth.get_variable(exits.settings.start_x_var)
 	local y = wesnoth.get_variable(exits.settings.start_y_var)
-	
+
 	if x ~= nil and y ~= nil then
 		local units = wesnoth.get_units{side=exits.settings.sides}
-		local var = "Lua_store_unit"
+		local varname = "Lua_store_unit"
 		for i,u in ipairs(units) do
-			wesnoth.set_variable(var, u.__cfg)
-			wesnoth.put_unit(u.x, u.y)
-			wesnoth.fire("unstore_unit", {variable=var, find_vacant=true})
+			wesnoth.extract_unit(u)
+			wesnoth.set_variable(varname, u.__cfg)
+			wesnoth.fire("unstore_unit", {
+				variable = varname,
+				find_vacant = true,
+				check_passability = true,
+				x = x,
+				y = y
+			})
 		end
-		wesnoth.set_variable(var)
+		wesnoth.set_variable(varname)
 		wesnoth.scroll_to_tile(x, y)
 	end
 	
