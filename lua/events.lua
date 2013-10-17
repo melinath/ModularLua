@@ -4,7 +4,7 @@ local game_events = wesnoth.game_events
 local helper = wesnoth.require "lua/helper.lua"
 
 
-local events = {}
+events = {}
 
 
 --! Event registration !--
@@ -73,7 +73,7 @@ events.tag = {
 		cls.instances = {}
 		events.tags[name] = cls
 		table.insert(events.tags, {name, cls})
-		wesnoth.register_wml_action(name, function(cfg) cls:init(cfg) end)
+		wesnoth.wml_actions[name] = function(cfg) cls:init(cfg) end
 		return cls
 	end,
 	init = function(cls, cfg)
@@ -108,15 +108,15 @@ events.tag.__index = events.tag
 --! Initialize scenario-level declarations of the tag on load.
 local old_on_load = game_events.on_load
 function game_events.on_load(cfg)
-	for i, tag_def in ipairs(events.tags) do
-		local name, cls = unpack(tag_def)
-		for i=#cfg,1,-1 do
-			local tag = cfg[i]
-			if name == tag[1] then
-				cls:init(tag[2])
-				table.remove(cfg, i)
-			end
+	for i=#cfg,1,-1 do
+		local tag = cfg[i]
+		if events.tags[tag[1]] then
+			events.tags[tag[1]]:init(tag[2])
+			table.remove(cfg, i)
 		end
+	end
+	for i, tag_def in ipairs(events.tags) do
+		local name, cls = table.unpack(tag_def)
 	end
 	old_on_load(cfg)
 end
@@ -127,7 +127,7 @@ local old_on_save = game_events.on_save
 function game_events.on_save()
 	cfg = old_on_save()
 	for i, tag_def in ipairs(events.tags) do
-		local name, cls = unpack(tag_def)
+		local name, cls = table.unpack(tag_def)
 		for i=1,#cls.instances do
 			table.insert(cfg, {name, cls.instances[i]:dump()})
 		end
@@ -144,7 +144,7 @@ end
 local function save_persisting_tags()
 	--! Saves tags that are marked to persist as wesnoth variables.
 	for i, tag_def in ipairs(events.tags) do
-		local name, cls = unpack(tag_def)
+		local name, cls = table.unpack(tag_def)
 		if cls.persist then
 			local arr = {}
 			for i=1,#cls.instances do
@@ -160,7 +160,7 @@ events.register("defeat", save_persisting_tags)
 local function load_persisted_tags()
 	--! Loads persisted tags from the previous scenario.
 	for i, tag in ipairs(events.tags) do
-		local name, cls = unpack(tag)
+		local name, cls = table.unpack(tag)
 		if cls.persist then
 			-- Hack to work around the built-in library's lack of a default for
 			-- array length in helper.get_variable_array. Remove in 1.10.

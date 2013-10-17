@@ -1,6 +1,6 @@
 --! This particular file mostly just makes accessing other files easier :-)
 
-local modular = {}
+modular = {}
 
 modular.settings = {
 	debug = false
@@ -37,8 +37,8 @@ end
 function modular.require_tags(...)
 	-- Loads the given tag libraries. Reports failures, but doesn't halt.
 	local tags = {}
-	for i=1,#arg do
-		local mod = tostring(arg[i])
+	for i=1, select('#', ...) do
+		local mod = tostring(select(i, ...))
 		local success, rval = pcall(modular.require, string.format("tags/%s", mod))
 		if success then
 			tags[mod] = rval

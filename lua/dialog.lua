@@ -126,7 +126,7 @@ dialog.dialog = {
 dialog.dialog.__index = dialog.dialog
 
 dialog.create = function(...)
-	return dialog.dialog:init(unpack(arg))
+	return dialog.dialog:init(table.unpack(...))
 end
 
 return dialog

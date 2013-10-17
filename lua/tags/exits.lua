@@ -66,7 +66,7 @@ exits.exit_canceler = events.tag:new("cancel_exit", {
 		if cancel_if ~= nil then
 			local lua = helper.get_child(cancel_if, "lua")
 			if lua ~= nil then
-				o.should_cancel = loadstring(lua.code)
+				o.should_cancel = load(lua.code, nil, 't')
 			end
 		end
 		o.cancel_if = helper.literal(cancel_if)
@@ -82,7 +82,7 @@ exits.exit_canceler = events.tag:new("cancel_exit", {
 		
 		local lua = helper.get_child(self.cancel_if, "lua")
 		if lua ~= nil then
-			return loadstring(lua.code)()
+			return load(lua.code, nil, 't')()
 		end
 		return wesnoth.eval_conditional(self.cancel_if)
 	end,

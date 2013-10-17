@@ -29,7 +29,7 @@ end)
 
 events.register("preload", function()
 	for i, loc in ipairs(wesnoth.get_locations{terrain="*^V*"}) do
-		capture.add_village(unpack(loc))
+		capture.add_village(table.unpack(loc))
 	end
 end)
 

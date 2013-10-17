@@ -28,4 +28,29 @@ local interface = {
 	end
 }
 
+interface.menu = {
+	--! Title of the menu.
+	title = nil,
+
+	--! Path to the impoge to be used for this menu.
+	image = nil,
+
+	--! A message to be displayed with the menu.
+	message = nil,
+
+	--! Table mapping option text to functions or submenus.
+	options = {},
+
+	new = function(cls, cfg)
+		local new_cls = cfg or {}
+		setmetatable(new_cls, cls)
+		new_cls.__index = new_cls
+		return new_cls
+	end,
+}
+interface.menu.__index = interface.menu
+
+--The menu - each option can either have a submenu or a function which executes arbitrary code. No, not quite right. A menu maps names to actions. Functions. A submenu is just another function. But nesting...
+--Okay, so make menus a special thing, then let them have intros, outtros, tree structure. No, just tree structure.
+
 return interface

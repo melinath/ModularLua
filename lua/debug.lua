@@ -77,11 +77,11 @@ shell = dialog.dialog:new(
 		
 		print = function(...)
 			local line = ""
-			for i=1,arg['n'] do
+			for i=1, select('#', ...) do
 				if line == "" then
-					line = tostring(arg[i])
+					line = tostring(select(i, ...))
 				else
-					line = line .. "\t" .. tostring(arg[i])
+					line = line .. "\t" .. tostring(select(i, ...))
 				end
 			end
 			if shell.output == nil then
@@ -103,27 +103,25 @@ shell = dialog.dialog:new(
 			}
 			setmetatable(env, {__index = _G, __newindex = _G})
 			
-			local func, err = loadstring(str, "shell")
+			local func, err = load(str, "shell", 't', env)
 			if err then
 				-- Fall back on a python-like interpretation of the string as a raw value.
-				local ret_func, ret_err = loadstring(string.format([[
+				local ret_func, ret_err = load(string.format([[
 					local x = %s
 					if type(x) == 'string' then
 						return string.format("'%%s'", x)
 					else
 						return tostring(x)
-					end]], str))
+					end]], str), nil, 't', env)
 				if ret_err then
 					shell.print(err)
 				else
-					setfenv(ret_func, env)
 					local success, rval = pcall(ret_func)
 					if rval then
 						shell.print(rval)
 					end
 				end
 			else
-				setfenv(func, env)
 				local success, rval = pcall(func)
 				if rval then
 					shell.print(rval)

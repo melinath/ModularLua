@@ -196,12 +196,12 @@ maps.shroud = {
 
 --! A map class. For now there will only be one instance of it, located
 --! at maps.current.
-maps.map = events.tag:new("map", {
+maps.map = events.tag:new("map_setup", {
 	id = nil,
 	--map_data = nil,
 	init = function(self, cfg)
-		if maps.current ~= nil then error("~wml:Only one [map] tag is permitted.") end
-		if cfg.id == nil then error("~wml:[map] tag must specify an id.") end
+		if maps.current ~= nil then error("~wml:Only one [map_setup] tag is permitted.") end
+		if cfg.id == nil then error("~wml:[map_setup] tag must specify an id.") end
 		
 		local o = self:get_parent().init(self, cfg)
 
@@ -284,7 +284,7 @@ events.register("prestart", function()
 	if map then
 		if maps.settings.mark_visited then map:mark_visited() end
 		if maps.settings.mark_known then map:mark_known() end
-		if maps.settings.remember_shroud then map:load_shroud() end
+		--if maps.settings.remember_shroud then map:load_shroud() end
 	else
 		if maps.settings.require_map then
 			error("~wml:Expected [map] tag is missing.")

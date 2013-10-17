@@ -71,12 +71,12 @@ function inspect.tostring(data)
 				if type(v) == "userdata" then v = inspect.userdata(v) end
 				if type(v) == "table" then
 					if depth >= max_depth then
-						result = result .. "{<max recursion reached>},\n"
+						result = result .. "{&lt;max recursion reached&gt;},\n"
 					else
 						v = helper.literal(v)
 						local id = tostring(v)
 						if known[id] then
-							result = result .. "{<loop detected>},\n"
+							result = result .. "{&lt;loop detected&gt;},\n"
 						else
 							known[id] = true
 							result = result .. "{\n" .. recurse(v, depth + 1, indent .. base_indent) .. indent .. "},\n"
