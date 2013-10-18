@@ -116,32 +116,39 @@ maps.schedules = {
 		}
 	},
 	from_str = function(schedule_str)
-		local s = {}
-		for value in string.gmatch(schedule_string, "[^%s,][^,]*") do
-			table.insert(s, value)
+		local schedule = {}
+		for time in string.gmatch(schedule_string, "[^%s,][^,]*") do
+			table.insert(schedule, maps.schedules[time])
 		end
-		return s
+		return schedule
 	end,
 	generate = function(turns_per_day)
-		local t = turns_per_day
-		local s = {}
-		for i=1,t do
-			if i < t/6 then
-				table.insert(s, "dawn")
-			elseif i < 2*t/6 then
-				table.insert(s, "morning")
-			elseif i < 3*t/6 then
-				table.insert(s, "afternoon")
-			elseif i < 4*t/6 then
-				table.insert(s, "dusk")
-			elseif i < 5*t/6 then
-				table.insert(s, "first_watch")
-			else
-				table.insert(s, "second_watch")
+		local schedule = {}
+		for i=1, turns_per_day do
+			local time = "second_watch"
+			if i <= turns_per_day/6 then
+				time = "dawn"
+			elseif i <= 2*turns_per_day/6 then
+				time = "morning"
+			elseif i <= 3*turns_per_day/6 then
+				time = "afternoon"
+			elseif i <= 4*turns_per_day/6 then
+				time = "dusk"
+			elseif i <= 5*turns_per_day/6 then
+				time = "first_watch"
 			end
+			table.insert(schedule, maps.schedules.schedules[time])
 		end
-		return s
-	end
+		return schedule
+	end,
+	
+	set = function(schedule)
+		local schedule_wml = {}
+		for i, time_def in ipairs(schedule) do
+			table.insert(schedule_wml, {"time", time_def})
+		end
+		wesnoth.fire("replace_schedule", schedule_wml)
+	end,
 }
 
 
@@ -213,20 +220,10 @@ maps.map = events.tag:new("map_setup", {
 		else
 			o.schedule = maps.schedules.from_str(cfg.schedule)
 		end
+		maps.schedules.set(o.schedule)
 		
 		maps.current = o
 		return o
-	end,
-	
-	set_schedule = function(self)
-		local s = {}
-		for i=1,#self.schedule do
-			local time = maps.schedules[self.schedule[i]]
-			if time ~= nil then
-				table.insert(s, {"time", time})
-			end
-		end
-		wesnoth.fire("replace_schedule", s)
 	end,
 	
 	is_known = function(self)
