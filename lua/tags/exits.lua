@@ -6,6 +6,7 @@ local helper = wesnoth.require "lua/helper.lua"
 
 local exits = {}
 
+
 exits.settings = {
 	start_x_var = "start_x",
 	start_y_var = "start_y",
@@ -14,32 +15,88 @@ exits.settings = {
 	sides = "1"
 }
 
---! Exit class
-exits.exit = events.tag:new("exit", {
-	init = function(self, cfg)
-		local o = self:get_parent().init(self, cfg)
-		
-		local filter = helper.get_child(cfg, "filter")
-		if filter == nil then error("~wml:[exit] expects a [filter] child", 0) end
-		
-		o.filter = helper.literal(filter)
-		o.start_x = cfg.start_x
-		o.start_y = cfg.start_y
-		o.scenario = cfg.scenario
-		
-		return o
+
+local matcher = {
+	filter = nil,
+	filter_location = nil,
+
+	new = function(cls, cfg)
+		local new_cls = cfg or {}
+		setmetatable(new_cls, cls)
+		new_cls.__index = new_cls
+		return new_cls
 	end,
-	is_active = function(self)
+
+	matches = function(self)
 		local c = wesnoth.current.event_context
-		local u = wesnoth.get_unit(c.x1, c.y1)
-		if u == nil then return false end
-		return wesnoth.match_unit(u, self.filter)
+		local matched = true
+		if self.filter_location ~= nil then
+			if not wesnoth.match_location(c.x1, c.y1, filter_location) then
+				matched = false
+			end
+		end
+		if self.filter ~= nil then
+			local unit = wesnoth.get_unit(c.x1, c.y1)
+			if not wesnoth.match_unit(unit, self.filter) then
+				matched = false
+			end
+		end
+		return matched
 	end,
-	activate = function(self)
+}
+matcher.__index = matcher
+
+
+exits.handler = matcher:new({
+	on_match = function(self)
+		--! Hook for things which should run when this matches.
+	end,
+})
+
+
+--! Map of exit names to exit instances for the current map.
+exits.exits = {}
+
+
+exits.exit = matcher:new({
+	name = nil,
+	start_x = nil,
+	start_y = nil,
+
+	--! Methods !--
+	
+	new = function(cls, cfg)
+		local new_cls = cfg or {}
+		setmetatable(new_cls, cls)
+		new_cls.__index = new_cls
+
+		--! Default to next scenario name for exit name.
+		new_cls.name = new_cls.name or new_cls.scenario
+
+		if new_cls.name == nil then
+			error("exit requires name")
+		elseif exits.exits[new_cls.name] then
+			error("Multiple exits with name '" .. new_cls.name .. "'")
+		end
+
+		new_cls.handlers = {
+			cancel={},
+			success={},
+		}
+		exits.exits[new_cls.name] = new_cls
+
+		return new_cls
+	end,
+
+	add_handler = function(self, handler_type, handler)
+		table.insert(self.handlers[handler_type], 0, handler)
+	end,
+
+	on_match = function(self)
+		--! Hook for things which should run when this matches.
 		local c = wesnoth.current.event_context
 		wesnoth.set_variable(exits.settings.start_x_var, self.start_x)
 		wesnoth.set_variable(exits.settings.start_y_var, self.start_y)
-		wesnoth.fire_event("exit", c.x1, c.y1, c.x2, c.y2)
 		wesnoth.fire("endlevel", {
 			name = "victory",
 			save = true,
@@ -50,54 +107,67 @@ exits.exit = events.tag:new("exit", {
 			next_scenario = self.scenario,
 			replay_save = false
 		})
-	end
+	end,
 })
 
---! Exit canceler class
-exits.exit_canceler = events.tag:new("cancel_exit", {
+exits.add_handler = function(exit_name, handler_type, handler)
+	local exit = exits.exits[name]
+	if exit == nil then error("Exit named '" .. exit_name .. "' does not exist") end
+	exit:add_handler(handler_type, handler)
+end
+
+
+events.register("moveto", function()
+	for name, exit in pairs(exits.exits) do
+		if exit:matches() then
+			local matches = true
+			for i, handler in ipairs(exit.handlers.cancel) do
+				if handler:matches() then
+					matches = false
+					handler:on_match()
+					break
+				end
+			end
+			if matches then
+				for i, handler in ipairs(exit.handlers.success) do
+					if handler:matches() then
+						handler:on_match()
+						break
+					end
+				end
+				exit:on_match()
+				break
+			end
+		end
+	end
+end)
+
+
+--! Exit tag
+exits.exit_tag = events.tag:new("exit", {
 	init = function(self, cfg)
 		local o = self:get_parent().init(self, cfg)
 		
 		local filter = helper.get_child(cfg, "filter")
-		if filter == nil then error("~wml:[cancel_exit] expects a [filter] child", 0) end
-		o.filter = helper.literal(filter)
+		if filter == nil then error("~wml:[exit] expects a [filter] child", 0) end
 		
-		local cancel_if = helper.get_child(cfg, "cancel_if")
-		if cancel_if ~= nil then
-			local lua = helper.get_child(cancel_if, "lua")
-			if lua ~= nil then
-				o.should_cancel = load(lua.code, nil, 't')
-			end
-		end
-		o.cancel_if = helper.literal(cancel_if)
+		local new_cfg = {
+			filter = helper.literal(filter),
+			name = cfg.name,
+			start_x = cfg.start_x,
+			start_y = cfg.start_y,
+			scenario = cfg.scenario,
+		}
 		
-		o.command = helper.get_child(cfg, "command")
-	end,
-	should_cancel = function(self)
-		local c = wesnoth.current.event_context
-		local u = wesnoth.get_unit(c.x1, c.y1)
-		
-		if not wesnoth.match_unit(u, self.filter) then return false end
-		if self.cancel_if == nil then return true end
-		
-		local lua = helper.get_child(self.cancel_if, "lua")
-		if lua ~= nil then
-			return load(lua.code, nil, 't')()
-		end
-		return wesnoth.eval_conditional(self.cancel_if)
-	end,
-	run_commands = function(self)
-		if self.command ~= nil then
-			for i=1,#self.command do
-				local v = self.command[i]
-				wesnoth.fire(v[1], v[2])
-			end
-		end
+		exits.exit:new(new_cfg)
+
+		return o
 	end,
 })
 
+
+--! Set starting position
 events.register("prestart", function()
-	-- Set starting position.
 	local x = wesnoth.get_variable(exits.settings.start_x_var)
 	local y = wesnoth.get_variable(exits.settings.start_y_var)
 
@@ -118,27 +188,9 @@ events.register("prestart", function()
 		wesnoth.set_variable(varname)
 		wesnoth.scroll_to_tile(x, y)
 	end
-	
+
 	wesnoth.set_variable(exits.settings.start_x_var)
 	wesnoth.set_variable(exits.settings.start_y_var)
-end)
-
-events.register("moveto", function()
-	local es = exits.exit.instances
-	for i=1,#es do
-		if es[i]:is_active() then
-			local activate = true
-			local cs = exits.exit_canceler.instances
-			for j=1,#cs do
-				if cs[j]:should_cancel() then
-					activate = false
-					cs[j]:run_commands()
-					break
-				end
-			end
-			if activate then es[i]:activate() end
-		end
-	end
 end)
 
 
