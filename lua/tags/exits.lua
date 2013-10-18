@@ -89,7 +89,7 @@ exits.exit = matcher:new({
 	end,
 
 	add_handler = function(self, handler_type, handler)
-		table.insert(self.handlers[handler_type], 0, handler)
+		table.insert(self.handlers[handler_type], 1, handler)
 	end,
 
 	on_match = function(self)
@@ -111,7 +111,7 @@ exits.exit = matcher:new({
 })
 
 exits.add_handler = function(exit_name, handler_type, handler)
-	local exit = exits.exits[name]
+	local exit = exits.exits[exit_name]
 	if exit == nil then error("Exit named '" .. exit_name .. "' does not exist") end
 	exit:add_handler(handler_type, handler)
 end
