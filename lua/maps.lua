@@ -1,176 +1,122 @@
 --! Defines an interface for common map manipulations for wesnoth rpgs,
---! including automatic shroud loading and saving, etc.
+--! including automatic shroud loading and saving, knowledge of map existence,
+--! exits from one map to another, village capture handling..
+
+local helper = wesnoth.require "lua/helper.lua"
 
 local events = modular.require "events"
+local scenario = modular.require "scenario"
+local utils = modular.require "utils"
 
 
 local maps = {}
 
 
 maps.settings = {
-	require_map = true,
+	no_map = false,
 	remember_shroud = true,
 	mark_visited = true,
 	mark_known = true,
 	shroud_sides = {1},
-}
-maps.defaults = {
-	turns_per_day = 6,
+	-- current map id
+	map = nil,
+	start_x_var = "start_x",
+	start_y_var = "start_y",
+	--! A comma-separated list of sides, like you would pass to a standard unit
+	--! filter.
+	exit_sides = "1",
+
+	-- Set to nil to disable capture handling.
+	no_capture_sides = {[1] = true},
 }
 
+-- Holds an instance of the current map. Shortcut.
+maps.current = nil
 
-local _ = wesnoth.textdomain "wesnoth-help"
-maps.schedules = {
-	schedules = {
-		dawn = {
-			id=dawn,
-			name= _ "Dawn",
-			image="misc/schedule-dawn.png",
-			red=-20,
-			green=-20,
-			sound="ambient/morning.ogg",
-		},
-		morning = {
-			id=morning,
-			name= _ "Morning",
-			image="misc/schedule-morning.png",
-			lawful_bonus=25
-		},
-		afternoon = {
-			id=afternoon,
-			name= _ "Afternoon",
-			image="misc/schedule-afternoon.png",
-			lawful_bonus=25
-		},
-		dusk = {
-			id=dusk,
-			name= _ "Dusk",
-			image="misc/schedule-dusk.png",
-			green=-20,
-			blue=-20,
-			sound="ambient/night.ogg",
-		},
-		first_watch = {
-			id=first_watch,
-			name= _ "First Watch",
-			image="misc/schedule-firstwatch.png",
-			lawful_bonus=-25,
-			red=-45,
-			green=-35,
-			blue=-10,
-		},
-		second_watch = {
-			id=second_watch,
-			name= _ "Second Watch",
-			image="misc/schedule-secondwatch.png",
-			lawful_bonus=-25,
-			red=-45,
-			green=-35,
-			blue=-10
-		},
-		indoors = {
-			id=indoors,
-			name= _ "Indoors",
-			image="misc/schedule-indoors.png",
-			lighter=indoors_illum,
-			{
-				"illuminated_time", {
-					id=indoors_illum,
-					name= _ "Indoors",
-					image="misc/schedule-indoors.png",
-					lawful_bonus=25
-				}
-			}
-		},
-		underground = {
-			id=underground,
-			name= _ "Underground",
-			image="misc/schedule-underground.png",
-			lawful_bonus=-25,
-			red=-45,
-			green=-35,
-			blue=-10,
-			{
-				"illuminated_time", {
-					id=underground_illum,
-					name= _ "Underground",
-					image="misc/schedule-underground-illum.png",
-				}
-			}
-		},
-		deep_underground = {
-			id=deep_underground,
-			name= _ "Deep Underground",
-			image="misc/schedule-underground.png",
-			lawful_bonus=-30,
-			red=-40,
-			green=-45,
-			blue=-15,
-			{
-				"illuminated_time", {
-					id=deep_underground_illum,
-					name= _ "Deep Underground",
-					image="misc/schedule-underground-illum.png"
-				}
-			}
-		}
-	},
-	from_str = function(schedule_str)
-		local schedule = {}
-		for time in string.gmatch(schedule_string, "[^%s,][^,]*") do
-			table.insert(schedule, maps.schedules[time])
-		end
-		return schedule
-	end,
-	generate = function(turns_per_day)
-		local schedule = {}
-		for i=1, turns_per_day do
-			local time = "second_watch"
-			if i <= turns_per_day/6 then
-				time = "dawn"
-			elseif i <= 2*turns_per_day/6 then
-				time = "morning"
-			elseif i <= 3*turns_per_day/6 then
-				time = "afternoon"
-			elseif i <= 4*turns_per_day/6 then
-				time = "dusk"
-			elseif i <= 5*turns_per_day/6 then
-				time = "first_watch"
+-- take map from setup (required unless no_map = true in setup)
+local function map_setup_handler(setup)
+	if not setup.no_map and not setup.map then
+		error("Map id required in setup (or set no_map=true).")
+	end
+	maps.settings.no_map = setup.no_map or maps.settings.no_map
+	maps.settings.map = setup.map
+	maps.current = maps.map:init({id=maps.settings.map})
+
+	maps.settings.no_capture_sides = setup.no_capture_sides or maps.settings.no_capture_sides
+end
+table.insert(scenario.setup_handlers, map_setup_handler)
+
+
+-- Map class. Currently just provides shortcuts to getting/setting information
+-- about the map.
+maps.map = utils.class:subclass({
+	-- Map id. Used for getting/storing variables about the map.
+	id = nil,
+
+	-- map_data = nil,
+	
+	-- Whether the player knows that the map exists.
+	is_known = function(self) return self:get("known") end,
+	mark_known = function(self) self:set("known", true) end,
+	
+	-- Whether the player has actually been to the map.
+	is_visited = function(self) return self:get("visited") end,
+	mark_visited = function(self) self:set("visited", true) end,
+	
+	load_shroud = function(self)
+		if maps.settings.remember_shroud then
+			for i, side in ipairs(maps.settings.shroud_sides) do
+				local shroud_data = self:get(string.format("shroud%d", side))
+				if shroud_data ~= nil then
+					local cfg = maps.shroud.data_to_filter(shroud_data)
+					cfg['side'] = side
+					wesnoth.fire("remove_shroud", cfg)
+				end
 			end
-			table.insert(schedule, maps.schedules.schedules[time])
 		end
-		return schedule
+	end,
+	save_shroud = function(self)
+		if maps.settings.remember_shroud then
+			for i, side_number in ipairs(maps.settings.shroud_sides) do
+				local side = wesnoth.sides[side_number]
+				local shroud_data = side.__cfg.shroud_data
+				if shroud_data ~= "" then
+					self:set(string.format("shroud%d", side_number), shroud_data)
+				end
+			end
+		end
 	end,
 	
-	set = function(schedule)
-		local schedule_wml = {}
-		for i, time_def in ipairs(schedule) do
-			table.insert(schedule_wml, {"time", time_def})
-		end
-		wesnoth.fire("replace_schedule", schedule_wml)
+	set = function(self, var, value)
+		wesnoth.set_variable(string.format("maps.%s.%s", self.id, var), value)
 	end,
-}
-
-
---! Generic map-related functions.
-
-
-maps.vars = {
-	get_name = function(map_id, var)
-		return string.format("maps.%s.%s", map_id, var)
+	get = function(self, var)
+		return wesnoth.get_variable(string.format("maps.%s.%s", self.id, var))
 	end,
-	get = function(map_id, var, default)
-		local v = maps.vars.get_name(map_id, var)
-		return wesnoth.get_variable(v) or default
-	end,
-	set = function(map_id, var, value)
-		local v = maps.vars.get_name(map_id, var)
-		wesnoth.set_variable(v, value)
+})
+
+
+-- At prestart, mark the current map as visited & known, and load shroud data
+-- if there is any.
+events.register("prestart", function()
+	if maps.current then
+		if maps.settings.mark_visited then maps.current:mark_visited() end
+		if maps.settings.mark_known then maps.current:mark_known() end
+		if maps.settings.remember_shroud then maps.current:load_shroud() end
 	end
-}
+end)
+
+-- At the end of the scenario, save the shroud data for next time.
+local function save_shroud()
+	if maps.current then
+		if maps.settings.remember_shroud then maps.current:save_shroud() end
+	end
+end
+events.register("victory", save_shroud)
+events.register("defeat", save_shroud)
 
 
---! Shroud handling
+--! Shroud handling !--
 maps.shroud = {
 	data_to_filter = function(shroud_data)
 		--! Converts shroud data to a standard location filter.
@@ -201,101 +147,164 @@ maps.shroud = {
 }
 
 
---! A map class. For now there will only be one instance of it, located
---! at maps.current.
-maps.map = events.tag:new("map_setup", {
-	id = nil,
-	--map_data = nil,
-	init = function(self, cfg)
-		if maps.current ~= nil then error("~wml:Only one [map_setup] tag is permitted.") end
-		if cfg.id == nil then error("~wml:[map_setup] tag must specify an id.") end
-		
-		local o = self:get_parent().init(self, cfg)
+--! Exits & starting positions !--
 
-		o.id = cfg.id
-		o.turns_per_day = cfg.turns_per_day or maps.defaults.turns_per_day
-		
-		if cfg.schedule == nil then
-			o.schedule = maps.schedules.generate(o.turns_per_day)
-		else
-			o.schedule = maps.schedules.from_str(cfg.schedule)
-		end
-		maps.schedules.set(o.schedule)
-		
-		maps.current = o
-		return o
-	end,
-	
-	is_known = function(self)
-		return maps.vars.get(self.id, "known")
-	end,
-	mark_known = function(self)
-		-- Marks the map as "known"
-		maps.vars.set(self.id, "known", true)
-	end,
-	
-	is_visited = function(self)
-		return maps.vars.get(self.id, "visited")
-	end,
-	mark_visited = function(self)
-		-- Marks the map as "visited"
-		maps.vars.set(self.id, "visited", true)
-	end,
-	
-	load_shroud = function(self)
-		if maps.settings.remember_shroud then
-			for i, side in ipairs(maps.settings.shroud_sides) do
-				local shroud_data = self:get(string.format("shroud%d", side))
-				if shroud_data ~= nil then
-					local cfg = maps.shroud.data_to_filter(shroud_data)
-					cfg['side'] = side
-					wesnoth.fire("remove_shroud", cfg)
-				end
-			end
-		end
-	end,
-	save_shroud = function(self)
-		if maps.settings.remember_shroud then
-			for i, side_number in ipairs(maps.settings.shroud_sides) do
-				local side = wesnoth.sides[side_number]
-				local shroud_data = side.__cfg.shroud_data
-				if shroud_data ~= "" then
-					self:set(string.format("shroud%d", side_number), shroud_data)
-				end
-			end
-		end
-	end,
-	
-	set = function(self, var, value)
-		maps.vars.set(self.id, var, value)
-	end,
-	get = function(self, var, default)
-		return maps.vars.get(self.id, var, default)
+maps.exit_handler = utils.matcher:subclass({
+	on_match = function(self)
+		--! Hook for things which should run when this matches.
 	end,
 })
 
 
---! Event registrations
-events.register("prestart", function()
-	local map = maps.current
-	if map then
-		if maps.settings.mark_visited then map:mark_visited() end
-		if maps.settings.mark_known then map:mark_known() end
-		--if maps.settings.remember_shroud then map:load_shroud() end
-	else
-		if maps.settings.require_map then
-			error("~wml:Expected [map] tag is missing.")
+--! Map of exit names to exit instances for the current map.
+maps.exits = {}
+
+
+maps.exit = utils.matcher:subclass({
+	name = nil,
+	start_x = nil,
+	start_y = nil,
+
+	--! Methods !--
+	
+	init = function(cls, cfg)
+		local instance = utils.matcher.init(cls, cfg)
+
+		--! Default to next scenario name for exit name.
+		instance.name = instance.name or instance.scenario
+
+		if instance.name == nil then
+			error("exit requires name")
+		elseif maps.exits[instance.name] then
+			error("Multiple exits with name '" .. instance.name .. "'")
+		end
+
+		instance.handlers = {
+			cancel={},
+			success={},
+		}
+		maps.exits[instance.name] = instance
+
+		return instance
+	end,
+
+	add_handler = function(self, handler_type, handler)
+		table.insert(self.handlers[handler_type], 1, handler)
+	end,
+
+	on_match = function(self)
+		--! Hook for things which should run when this matches.
+		local c = wesnoth.current.event_context
+		wesnoth.set_variable(maps.settings.start_x_var, self.start_x)
+		wesnoth.set_variable(maps.settings.start_y_var, self.start_y)
+		wesnoth.fire("endlevel", {
+			name = "victory",
+			save = true,
+			carryover_report = false,
+			carryover_percentage = 100,
+			linger_mode = false,
+			bonus = false,
+			next_scenario = self.scenario,
+			replay_save = false
+		})
+	end,
+})
+
+maps.add_exit_handler = function(exit_name, handler_type, handler)
+	local exit = maps.exits[exit_name]
+	if exit == nil then error("Exit named '" .. exit_name .. "' does not exist") end
+	exit:add_handler(handler_type, handler)
+end
+
+
+events.register("moveto", function()
+	for name, exit in pairs(maps.exits) do
+		if exit:matches() then
+			local matches = true
+			for i, handler in ipairs(exit.handlers.cancel) do
+				if handler:matches() then
+					matches = false
+					handler:on_match()
+					break
+				end
+			end
+			if matches then
+				for i, handler in ipairs(exit.handlers.success) do
+					if handler:matches() then
+						handler:on_match()
+						break
+					end
+				end
+				exit:on_match()
+				break
+			end
 		end
 	end
 end)
-local function save_shroud()
-	local map = maps.current
-	if map then
-		if maps.settings.remember_shroud then map:save_shroud() end
+
+
+--! Exit tag class
+scenario.tag:subclass({
+	name = "exit",
+	init = function(cls, cfg)
+		local instance = scenario.tag.init(cls, cfg)
+
+		local filter = helper.get_child(instance.wml, "filter")
+		if filter == nil then error("~wml:[exit] expects a [filter] child", 0) end
+		
+		maps.exit:init({
+			filter = helper.literal(filter),
+			name = instance.wml.name,
+			start_x = instance.wml.start_x,
+			start_y = instance.wml.start_y,
+			scenario = instance.wml.scenario,
+		})
+
+		return instance
+	end,
+})
+
+
+--! Set starting position
+events.register("prestart", function()
+	local x = wesnoth.get_variable(maps.settings.start_x_var)
+	local y = wesnoth.get_variable(maps.settings.start_y_var)
+
+	if x ~= nil and y ~= nil then
+		local units = wesnoth.get_units{side=maps.settings.exit_sides}
+		local varname = "Lua_store_unit"
+		for i,u in ipairs(units) do
+			wesnoth.extract_unit(u)
+			wesnoth.set_variable(varname, u.__cfg)
+			wesnoth.fire("unstore_unit", {
+				variable = varname,
+				find_vacant = true,
+				check_passability = true,
+				x = x,
+				y = y
+			})
+		end
+		wesnoth.set_variable(varname)
+		wesnoth.scroll_to_tile(x, y)
 	end
-end
-events.register("victory", save_shroud)
-events.register("defeat", save_shroud)
+
+	wesnoth.set_variable(maps.settings.start_x_var)
+	wesnoth.set_variable(maps.settings.start_y_var)
+end)
+
+
+--! Village captures !--
+-- Currently very basic support; lets you define a side as being unable to
+-- capture. Any villages they *do* capture are set ownerless.
+
+events.register("capture", function()
+	local c = wesnoth.current.event_context
+	local unit = wesnoth.get_unit(c.x1, c.y1)
+
+	if maps.settings.no_capture_sides[unit.side] then
+		wesnoth.set_village_owner(c.x1, c.y1, nil)
+	end
+end)
 
 
 return maps
