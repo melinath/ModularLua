@@ -149,12 +149,6 @@ maps.shroud = {
 
 --! Exits & starting positions !--
 
-maps.exit_handler = utils.matcher:subclass({
-	on_match = function(self)
-		--! Hook for things which should run when this matches.
-	end,
-})
-
 
 --! Map of exit names to exit instances for the current map.
 maps.exits = {}
@@ -210,11 +204,21 @@ maps.exit = utils.matcher:subclass({
 	end,
 })
 
-maps.add_exit_handler = function(exit_name, handler_type, handler)
-	local exit = maps.exits[exit_name]
-	if exit == nil then error("Exit named '" .. exit_name .. "' does not exist") end
-	exit:add_handler(handler_type, handler)
-end
+
+maps.exit_handler = utils.matcher:subclass({
+	init = function(cls, cfg)
+		local instance = utils.matcher.init(cls, cfg)
+		if not instance.exit_name then error("Exit handler requires exit name.") end
+		if not instance.type then error("Exit handler requires type key.") end
+		local exit = maps.exits[instance.exit_name]
+		if exit == nil then error("Exit named '" .. exit_name .. "' does not exist") end
+		exit:add_handler(instance.type, instance)
+		return instance
+	end,
+	on_match = function(self)
+		--! Hook for things which should run when this matches.
+	end,
+})
 
 
 events.register("moveto", function()
@@ -253,7 +257,7 @@ scenario.tag:subclass({
 		if filter == nil then error("~wml:[exit] expects a [filter] child", 0) end
 		
 		maps.exit:init({
-			filter = helper.literal(filter),
+			filters = {filter = helper.literal(filter)},
 			name = instance.wml.name,
 			start_x = instance.wml.start_x,
 			start_y = instance.wml.start_y,
