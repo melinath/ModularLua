@@ -203,7 +203,7 @@ end
 events.register("new turn", function()
 	if time.settings.track_time then
 		local t = time.get()
-		time.set(t and t + 24/maps.current.turns_per_day or 0)
+		time.set(t and t + 24/time.settings.turns_per_day or 0)
 	end
 end)
 

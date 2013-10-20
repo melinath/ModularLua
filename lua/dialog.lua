@@ -3,9 +3,11 @@
 local helper = wesnoth.require "lua/helper.lua"
 local T = helper.set_wml_tag_metatable {}
 
+local utils = modular.require "utils"
+
 local dialog = {}
 
-function dialog.parse(cfg)
+function dialog.parse(grid)
 	--[[
 		Given a simple table input, converts it into a dialog.
 		For example, the input:
@@ -27,13 +29,13 @@ function dialog.parse(cfg)
 			}
 		This output can be used for wesnoth.show_dialog.
 	]]
-	local rows = dialog.make_rows(cfg)
+	local rows = dialog.make_rows(grid)
 	local d = {
 		T.tooltip{id="tooltip_large"},
 		T.helptip{id="tooltip_large"},
 		T.grid(rows)
 	}
-	for k, v in pairs(cfg) do
+	for k, v in pairs(grid) do
 		if type(k) ~= "number" then
 			d[k] = v
 		end
@@ -41,23 +43,23 @@ function dialog.parse(cfg)
 	return d
 end
 
-function dialog.make_rows(cfg, idx, rowlen)
-	-- Given a cfg, parses it into rows and returns them. If ``num_cols`` is
+function dialog.make_rows(grid, idx, rowlen)
+	-- Given a grid, parses it into rows and returns them. If ``num_cols`` is
 	-- provided, will start at idx and only parse while the number of columns
 	-- remains the same. If ``num_cols`` is not provided, will build subgrids
 	-- to hold different numbers of columns.
 	local rows = {}
 	local idx = idx or 1
 	local old_rowlen = rowlen
-	while idx <= #cfg do
-		local rowlen = #cfg[idx]
+	while idx <= #grid do
+		local rowlen = #grid[idx]
 		local columns
 		if rowlen == 0 then
 			-- it's a single-cell row.
-			columns = dialog.make_columns{cfg[idx]}
+			columns = dialog.make_columns{grid[idx]}
 			rowlen = 1
 		else
-			columns = dialog.make_columns(cfg[idx])
+			columns = dialog.make_columns(grid[idx])
 		end
 		if (old_rowlen == nil and rowlen == 1) or old_rowlen == rowlen then
 			-- We're okay to add the row to the current list of rows
@@ -65,7 +67,7 @@ function dialog.make_rows(cfg, idx, rowlen)
 			idx = idx + 1
 		elseif old_rowlen == nil then
 			-- We're okay to generate a subgrid without increasing idx
-			local subrows, new_idx = dialog.make_rows(cfg, idx, rowlen)
+			local subrows, new_idx = dialog.make_rows(grid, idx, rowlen)
 			idx = new_idx
 			table.insert(rows, T.row{T.column{T.grid(subrows)}})
 		else
@@ -94,15 +96,15 @@ function dialog.make_columns(cfg)
 end
 
 --! A base class for dialogs
-dialog.dialog = {
-	new = function(self, grid, cfg)
-		local o = cfg or {}
-		setmetatable(o, self)
-		o.dialog = dialog.parse(grid)
-		return o
+dialog.dialog = utils.class:subclass({
+	init = function(cls, cfg)
+		local instance = utils.class.init(cls, cfg)
+		instance.parsed = dialog.parse(instance.grid)
+		wesnoth.wml_actions.wml_message({message=inspect.tostring(instance.parsed), logger="err"})
+		return instance
 	end,
 	display = function(self)
-		local rval = wesnoth.show_dialog(self.dialog, function() self:preshow() end, function() self:postshow() end)
+		local rval = wesnoth.show_dialog(self.parsed, function() self:preshow() end, function() self:postshow() end)
 		if rval == -1 then
 			self:on_enter()
 		elseif rval == -2 then
@@ -122,11 +124,10 @@ dialog.dialog = {
 	on_enter = function(self) end,
 	on_esc = function(self) end,
 	on_button = function(self, rval) end,
-}
-dialog.dialog.__index = dialog.dialog
+})
 
-dialog.create = function(...)
-	return dialog.dialog:init(table.unpack(...))
+dialog.create = function(grid)
+	return dialog.dialog:init({grid=grid})
 end
 
 return dialog

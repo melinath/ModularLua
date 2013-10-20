@@ -1,6 +1,8 @@
-local debug = {}
 local inspect = modular.require "inspect"
 local dialog = modular.require "dialog"
+
+
+local debug = {}
 
 
 function debug.inspect(data, depth)
@@ -14,30 +16,27 @@ function debug.type(data)
 	wesnoth.fire("message", {message=inspect.type(data)})
 end
 
-local settings = {
+
+local shell_settings = {
 	rnext = 1,
 	rprev = 2,
 	rhist = 3,
 	prompt = "> "
 }
-local shell = {}
-shell = dialog.dialog:new(
+
+local shell = dialog.dialog:init(
 	{
-		vertical_placement="bottom",
-		{widget="scroll_label", id="shell_output"},
-		{widget="text_box", id="shell"},
-		{
-			{widget="button", id="shell_prev", label="Previous", return_value=settings.rprev},
-			{widget="button", id="shell_next", label="Next", return_value=settings.rnext},
-			--{widget="button", id="shell_view_history", label="History", return_value=settings.rhist}
-		}
-	},
-	{
-		meta = {
-			__call = function() shell:display() end,
-			__index = dialog.dialog,
+		grid = {
+			vertical_placement="bottom",
+			{widget="scroll_label", id="shell_output"},
+			{widget="text_box", id="shell"},
+			{
+				{widget="button", id="shell_prev", label="Previous", return_value=shell_settings.rprev},
+				{widget="button", id="shell_next", label="Next", return_value=shell_settings.rnext},
+				--{widget="button", id="shell_view_history", label="History", return_value=shell_settings.rhist}
+			}
 		},
-		settings = settings,
+		settings = shell_settings,
 		output = nil,
 		input = nil,
 		
@@ -170,8 +169,12 @@ shell = dialog.dialog:new(
 		end
 	}
 )
-setmetatable(shell, shell.meta)
+debug.shell_dialog = shell
 
-debug.shell = shell
+
+function debug.shell()
+	debug.shell_dialog:display()
+end
+
 
 return debug
