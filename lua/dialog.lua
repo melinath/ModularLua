@@ -100,7 +100,6 @@ dialog.dialog = utils.class:subclass({
 	init = function(cls, cfg)
 		local instance = utils.class.init(cls, cfg)
 		instance.parsed = dialog.parse(instance.grid)
-		wesnoth.wml_actions.wml_message({message=inspect.tostring(instance.parsed), logger="err"})
 		return instance
 	end,
 	display = function(self)
