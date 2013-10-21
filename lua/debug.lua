@@ -144,6 +144,13 @@ shell = dialog.dialog:init({
 		if shell.history.current ~= nil then
 			wesnoth.set_dialog_value(shell.history.current, "shell")
 		end
+		-- Also set the active-ness of the history buttons.
+		if shell.history.index == #shell.history then
+			wesnoth.set_dialog_active(false, "shell_prev")
+		end
+		if shell.history.index == 0 then
+			wesnoth.set_dialog_active(false, "shell_next")
+		end
 	end,
 	
 	postshow = function(self)
