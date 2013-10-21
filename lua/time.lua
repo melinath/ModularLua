@@ -185,7 +185,7 @@ time.schedule = {
 
 function time.display()
 	local label = string.format(time.settings.display_string, time.get())
-	local d = dialog.create({widget="label", label=label})
+	local d = dialog.create({{widget="label", label=label}})
 	d:display()
 end
 
