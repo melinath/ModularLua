@@ -1,1 +1,1 @@
-This Wesnoth add-on aims to make writing Lua scripts for other Wesnoth add-ons easier by providing a variety of useful scripts which can be used independently of one another.
+ModularLua is meant to make it easier to develop Lua for Wesnoth add-ons by providing high-quality, decoupled utilites. Currently provides class-based single inheritance, streamlined dialog handling, and a debug shell with history, among other features.
