@@ -11,7 +11,7 @@ function dialog.parse(grid)
 	--[[
 		Given a simple table input, converts it into a dialog.
 		For example, the input:
-			{widget="text_box", id="shell"}
+			{{widget="text_box", id="shell"}}
 		would give the output (with T = helper.set_wml_tag_metatable {}):
 			{
 				T.tooltip{id="tooltip_large"},
