@@ -3,6 +3,8 @@
 local helper = wesnoth.require "lua/helper.lua"
 local T = helper.set_wml_tag_metatable {}
 
+local utils = modular.require "utils"
+
 local interface = {
 	message = function(image, message, speaker)
 		--! Fires a wesnoth message. Arguments for this function are effectively
@@ -14,43 +16,42 @@ local interface = {
 		if speaker == nil then speaker = 'narrator' end
 		wesnoth.fire("message", {speaker=speaker, image=image, message=message})
 	end,
-	get_choice = function(cfg, options)
-		-- cfg is an (img, msg, speaker) table; options is a table of tables
-		-- containing an option and a function.
-		local o = {}
-		local f = {}
-		for i=1,#options do
-			table.insert(o, _(options[i].opt))
-			table.insert(f, options[i].func)
-		end
-		choice = helper.get_user_choice(cfg, o)
-		f[choice]()
-	end
 }
 
-interface.menu = {
-	--! Title of the menu.
+interface.menu = utils.class:subclass({
+	--! Title of the menu. Displayed next to the menu image.
 	title = nil,
 
-	--! Path to the impoge to be used for this menu.
-	image = nil,
+	--! Path to the image to be used for this menu.
+	image = 'wesnoth-icon.png',
+
+	--! Speaker for the message.
+	speaker = 'narrator',
 
 	--! A message to be displayed with the menu.
 	message = nil,
 
-	--! Table mapping option text to functions or submenus.
+	--! List of tables containing name and func keys.
 	options = {},
 
-	new = function(cls, cfg)
-		local new_cls = cfg or {}
-		setmetatable(new_cls, cls)
-		new_cls.__index = new_cls
-		return new_cls
+	display = function(self)
+		local choices = {}
+		for i, option in ipairs(self.options) do
+			choices[i] = option.name or option[1]
+		end
+		local choice = helper.get_user_choice(
+			{
+				speaker = self.speaker,
+				caption = self.title,
+				image = self.image,
+				message = self.message
+			},
+			choices
+		)
+		local func = self.options[choice].func or self.options[choice][2]
+		func()
 	end,
-}
-interface.menu.__index = interface.menu
+})
 
---The menu - each option can either have a submenu or a function which executes arbitrary code. No, not quite right. A menu maps names to actions. Functions. A submenu is just another function. But nesting...
---Okay, so make menus a special thing, then let them have intros, outtros, tree structure. No, just tree structure.
 
 return interface
