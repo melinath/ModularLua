@@ -11,7 +11,7 @@ local interface = {
 		--! [image], message, [speaker]
 		if message == nil and speaker == nil then
 			message = image
-			image = "wesnoth-icon.png"
+			image = "portraits/bfw-logo.png"
 		end
 		if speaker == nil then speaker = 'narrator' end
 		wesnoth.fire("message", {speaker=speaker, image=image, message=message})
@@ -23,7 +23,7 @@ interface.menu = utils.class:subclass({
 	title = nil,
 
 	--! Path to the image to be used for this menu.
-	image = 'wesnoth-icon.png',
+	image = "portraits/bfw-logo.png",
 
 	--! Speaker for the message.
 	speaker = 'narrator',
