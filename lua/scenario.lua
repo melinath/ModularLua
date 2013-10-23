@@ -122,9 +122,9 @@ local function save_persisting_tags()
 		if scenario.tag_classes[name].persist then
 			local arr = {}
 			for i, tag in ipairs(tags) do
-				table.insert(arr, tag.to_wml())
+				table.insert(arr, tag:to_wml())
 			end
-			helper.set_variable_array(persist_variable_name(tag.name), arr)
+			helper.set_variable_array(persist_variable_name(name), arr)
 		end
 	end
 end
