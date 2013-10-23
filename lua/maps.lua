@@ -284,19 +284,10 @@ events.register("prestart", function()
 
 	if x ~= nil and y ~= nil then
 		local units = wesnoth.get_units{side=maps.settings.exit_sides}
-		local varname = "Lua_store_unit"
-		for i,u in ipairs(units) do
-			wesnoth.extract_unit(u)
-			wesnoth.set_variable(varname, u.__cfg)
-			wesnoth.fire("unstore_unit", {
-				variable = varname,
-				find_vacant = true,
-				check_passability = true,
-				x = x,
-				y = y
-			})
+		for i, unit in ipairs(units) do
+			local dst_x, dst_y = wesnoth.find_vacant_tile(x, y, unit)
+			wesnoth.put_unit(dst_x, dst_y, unit)
 		end
-		wesnoth.set_variable(varname)
 		wesnoth.scroll_to_tile(x, y)
 	end
 
