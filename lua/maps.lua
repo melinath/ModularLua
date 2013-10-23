@@ -186,6 +186,27 @@ maps.exit = utils.matcher:subclass({
 		table.insert(self.handlers[handler_type], 1, handler)
 	end,
 
+	matches = function(self)
+		-- Returns matches, handler
+		if not utils.matcher.matches(self) then
+			return false, nil
+		end
+
+		for i, handler in ipairs(self.handlers.cancel) do
+			if handler:matches() then
+				return false, handler
+			end
+		end
+
+		for i, handler in ipairs(self.handlers.success) do
+			if handler:matches() then
+				return true, handler
+			end
+		end
+
+		return true, nil
+	end,
+
 	on_match = function(self)
 		--! Hook for things which should run when this matches.
 		local c = wesnoth.current.event_context
@@ -223,25 +244,12 @@ maps.exit_handler = utils.matcher:subclass({
 
 events.register("moveto", function()
 	for name, exit in pairs(maps.exits) do
-		if exit:matches() then
-			local matches = true
-			for i, handler in ipairs(exit.handlers.cancel) do
-				if handler:matches() then
-					matches = false
-					handler:on_match()
-					break
-				end
-			end
-			if matches then
-				for i, handler in ipairs(exit.handlers.success) do
-					if handler:matches() then
-						handler:on_match()
-						break
-					end
-				end
-				exit:on_match()
-				break
-			end
+		local matches, handler = exit:matches()
+		if handler ~= nil then
+			handler:on_match()
+		end
+		if matches then
+			exit:on_match()
 		end
 	end
 end)
