@@ -74,7 +74,7 @@ scenario.tag = utils.class:subclass({
 		--! is simply the wml that was stored during ``init``, so that
 		--! using the output of this tag to create a new instance would result
 		--! in an instance identical to ``self``.
-		return self.cfg
+		return self.wml
 	end
 })
 
