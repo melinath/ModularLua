@@ -23,10 +23,12 @@ interface.menu = utils.class:subclass({
 	title = nil,
 
 	--! Path to the image to be used for this menu.
-	image = "portraits/bfw-logo.png",
+	image = nil,
+	default_image = "portraits/bfw-logo.png",
 
 	--! Speaker for the message.
-	speaker = 'narrator',
+	speaker = nil,
+	default_speaker = 'narrator',
 
 	--! A message to be displayed with the menu.
 	message = nil,
@@ -39,11 +41,16 @@ interface.menu = utils.class:subclass({
 		for i, option in ipairs(self.options) do
 			choices[i] = option.name or option[1]
 		end
+		local speaker = self.speaker or self.default_speaker
+		local image = self.image
+		if image == nil and self.speaker == nil then
+			image = self.default_image
+		end
 		local choice = helper.get_user_choice(
 			{
 				speaker = self.speaker,
 				caption = self.title,
-				image = self.image,
+				image = image,
 				message = self.message
 			},
 			choices
