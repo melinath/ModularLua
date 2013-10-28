@@ -1,3 +1,6 @@
+local dbg = modular.require("dbg")
+
+
 --! A module which allows simple, efficient registration of lua functions
 --! as event handlers.
 
@@ -30,10 +33,7 @@ function wesnoth.game_events.on_event(name)
 	local funcs = events.events[name]
 	if funcs ~= nil then
 		for i,f in ipairs(funcs) do
-			local success, rval = pcall(f)
-			if not success and modular.settings.debug then
-				modular.message(string.format("%s failed for %s event: %s", tostring(f), name, rval))
-			end
+			dbg.pcall(f)
 		end
 	end
 	if old_on_event ~= nil then old_on_event(name) end

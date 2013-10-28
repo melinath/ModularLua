@@ -2,18 +2,39 @@ local inspect = modular.require "inspect"
 local dialog = modular.require "dialog"
 
 
-local debug = {}
+local dbg = {}
 
 
-function debug.inspect(data, depth)
+function dbg.inspect(data, depth)
 	-- Displays a string representation of the data passed in to a max depth of
 	-- ``depth``.
 	wesnoth.fire("message", {message=inspect.tostring(data, depth)})
 end
 
 
-function debug.type(data)
+function dbg.type(data)
 	wesnoth.fire("message", {message=inspect.type(data)})
+end
+
+
+local handler = function(msg)
+	return msg
+end
+
+
+function dbg.pcall(func, ...)
+	--! Calls a function in protected mode. If there is an error,
+	--! prints a stack trace, but doesn't halt the program.
+	local traceback
+	local handler = function(msg)
+		traceback = debug.traceback(nil, 2)
+		return msg
+	end
+	local success, rval = xpcall(func, handler, ...)
+	if not success and modular.settings.debug then
+		modular.message(rval .. "\n" .. traceback)
+	end
+	return success, rval
 end
 
 
@@ -175,12 +196,12 @@ shell = dialog.dialog:init({
 		end
 	end
 })
-debug.shell_dialog = shell
+dbg.shell_dialog = shell
 
 
-function debug.shell()
-	debug.shell_dialog:display()
+function dbg.shell()
+	dbg.shell_dialog:display()
 end
 
 
-return debug
+return dbg
