@@ -36,24 +36,6 @@ function modular.dofile(name, addon)
 	return wesnoth.require(path)
 end
 
-function modular.require_tags(...)
-	-- Loads the given tag libraries. Reports failures, but doesn't halt.
-	local tags = {}
-	for i=1, select('#', ...) do
-		local mod = tostring(select(i, ...))
-		local success, rval = pcall(modular.require, string.format("tags/%s", mod))
-		if success then
-			tags[mod] = rval
-		else
-			if modular.settings.debug then
-				modular.message(string.format("Tag loading failed for %s. Error was: %s", mod, rval))
-			end
-			tags[mod] = nil
-		end
-	end
-	return tags
-end
-
 function modular.message(str)
 	wesnoth.message("ModularLua", str)
 end
