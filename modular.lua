@@ -24,6 +24,7 @@ function modular.require(name, addon)
 	--! Shortcut for wesnoth.require "~add-ons/<addon>/lua/<name>.lua".
 	--! ``addon`` defaults to "ModularLua".
 	local path = modular.build_path(name, addon)
+	if not wesnoth.have_file(path) then error("Can't require path; does not exist: " .. path) end
 	return wesnoth.require(path)
 end
 
@@ -31,6 +32,7 @@ function modular.dofile(name, addon)
 	--! Shortcut for wesnoth.dofile "~add-ons/<addon>/lua/<name>.lua".
 	--! ``addon`` defaults to "ModularLua".
 	local path = modular.build_path(name, addon)
+	if not wesnoth.have_file(path) then error("Can't dofile path; does not exist: " .. path) end
 	return wesnoth.require(path)
 end
 
