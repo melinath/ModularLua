@@ -32,7 +32,6 @@ local interface = {
 					speaker = unit_list[1].id
 				else
 					image = image_or_speaker
-					speaker = "narrator"
 				end
 			else
 				error("Bad image or speaker.")
@@ -40,6 +39,7 @@ local interface = {
 		else
 			image = "portraits/bfw-logo.png"
 		end
+		if speaker == nil then speaker = "narrator" end
 		wesnoth.wml_actions.message({
 			speaker = speaker,
 			image = image,
