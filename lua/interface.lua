@@ -6,15 +6,46 @@ local T = helper.set_wml_tag_metatable {}
 local utils = modular.require "utils"
 
 local interface = {
-	message = function(image, message, speaker)
-		--! Fires a wesnoth message. Arguments for this function are effectively
-		--! [image], message, [speaker]
-		if message == nil and speaker == nil then
-			message = image
+	message = function(image_or_speaker, caption, message)
+		--! Creates a wesnoth message. Arguments for this function are
+		--! [image_or_speaker, [caption,]] message
+		if message == nil then
+			message = caption
+			caption = nil
+		end
+		if message == nil then
+			message = image_or_speaker
+			image_or_speaker = nil
+		end
+		if message == nil then
+			error("No message provided.")
+		end
+		local image, speaker
+		if image_or_speaker ~= nil then
+			local ios_type = inspect.type(image_or_speaker)
+			if ios_type == "unit" then
+				speaker = image_or_speaker.id
+			elseif ios_type == "string" then
+				-- Try to get a unit with this as the id.
+				local unit_list = wesnoth.get_units({id=image_or_speaker})
+				if #unit_list > 0 then
+					speaker = unit_list[1].id
+				else
+					image = image_or_speaker
+					speaker = "narrator"
+				end
+			else
+				error("Bad image or speaker.")
+			end
+		else
 			image = "portraits/bfw-logo.png"
 		end
-		if speaker == nil then speaker = 'narrator' end
-		wesnoth.fire("message", {speaker=speaker, image=image, message=message})
+		wesnoth.wml_actions.message({
+			speaker = speaker,
+			image = image,
+			caption = caption,
+			message = message,
+		})
 	end,
 }
 
