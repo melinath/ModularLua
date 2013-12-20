@@ -79,7 +79,7 @@ interface.menu = utils.class:subclass({
 		end
 		local choice = helper.get_user_choice(
 			{
-				speaker = self.speaker,
+				speaker = speaker,
 				caption = self.title,
 				image = image,
 				message = self.message
